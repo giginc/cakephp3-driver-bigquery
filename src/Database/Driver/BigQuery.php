@@ -51,9 +51,12 @@ class BigQuery
     protected $_baseConfig = [
         'projectId' => null,
         'dataSet' => null,
+        'keyFile' => [], // json
+        'keyFilePath' => null,
         'requestTimeout' => 0,
         'retries' => 3,
-        'maximumBytesBilled' => 1,
+        'location' => '',
+        'maximumBytesBilled' => 1000000,
     ];
 
     /**
@@ -97,11 +100,26 @@ class BigQuery
     public function connect(string $name)
     {
         try {
-            $this->_db = new BigQueryClient([
+            $config = [
                 'projectId' => $this->_config['projectId'],
                 'requestTimeout' => $this->_config['requestTimeout'],
                 'retries' => $this->_config['retries'],
-            ]);
+            ];
+
+            // config keyFile
+            if ($this->_config['keyFile']) {
+                $config['keyFile'] = $this->_config['keyFile'];
+            }
+            // config keyFilePath
+            if ($this->_config['keyFilePath']) {
+                $config['keyFilePath'] = $this->_config['keyFilePath'];
+            }
+            // config location
+            if ($this->_config['location']) {
+                $config['location'] = $this->_config['location'];
+            }
+
+            $this->_db = new BigQueryClient($config);
 
             $this->connected = true;
         } catch (Exception $e) {

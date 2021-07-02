@@ -22,6 +22,11 @@ Now, you need to set the connection in your config/app.php file:
         'driver' => 'Giginc\BigQuery\Database\Driver\BigQuery',
         'projectId' => env('BIGQUERY_PROJECT_ID', 'project_id'),
         'dataSet' => env('BIGQUERY_DATASET', 'dataset'),
+        'keyFile' => [], // Console. Ex: json_decode(file_get_contents($path), true).
+        'keyFilePath' => null, //The full path to your service account credentials .json file retrieved.
+        'requestTimeout' => 0, // Defaults to 0 with REST and 60 with gRPC.
+        'retries' => 3, // Number of retries for a failed request. Defaults to 3.
+        'location' => 'us', // If provided, determines the default geographic location used when creating datasets and managing jobs.
         'maximumBytesBilled' => 1000000,
     ],
 
@@ -119,7 +124,21 @@ class PagesController extends AppController
     public function index()
     {
         $this->loadModel('Products');
-        $data = $this->Products->find()
+        $data = $this->Products->date('2021-04-12')
+            ->find()
+            ->fields([
+                'name',
+                'description',
+                'MAX(hit_count) AS max',
+                'COUNT(*) AS count',
+            ])
+            ->where([
+                'name' => 'iphone',
+                'hit_count >' => 0,
+            ])
+            ->group(['name'])
+            ->order(['name' => 'DESC'])
+            ->limit(5)
             ->all();
     }
 }
