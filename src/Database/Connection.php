@@ -8,7 +8,6 @@ use Giginc\BigQuery\Database\Driver\BigQuery;
 
 class Connection extends \Cake\Database\Connection
 {
-
     /**
      * Contains the configuration param for this connection
      *
@@ -26,7 +25,7 @@ class Connection extends \Cake\Database\Connection
     /**
      * MongoSchema
      *
-     * @var MongoSchema
+     * @var array BigQuerySchema
      * @access protected
      */
     protected $_schemaCollection;
@@ -68,9 +67,9 @@ class Connection extends \Cake\Database\Connection
     }
 
     /**
-     * @param null $driver
-     * @param array $config
-     * @return  BigQuery
+     * @param \Giginc\BigQuery\Database\Driver\BigQuery $driver Driver
+     * @param array $config Configure
+     * @return  \Giginc\BigQuery\Database\Driver\BigQuery
      */
     public function driver($driver = null, $config = [])
     {
@@ -85,13 +84,14 @@ class Connection extends \Cake\Database\Connection
     /**
      * connect to the database
      *
-     * @return boolean
      * @access public
+     * @return bool
      */
     public function connect()
     {
         try {
             $this->_driver->connect();
+
             return true;
         } catch (\Exception $e) {
             throw new MissingConnectionException(['reason' => $e->getMessage()]);
@@ -101,8 +101,8 @@ class Connection extends \Cake\Database\Connection
     /**
      * disconnect from the database
      *
-     * @return boolean
      * @access public
+     * @return bool
      */
     public function disconnect()
     {

@@ -33,10 +33,10 @@ class BigQuery
      */
     public $connected = false;
 
-   /**
+    /**
      * Database Instance
      *
-     * @var Giginc\BigQuery\Database
+     * @var \Giginc\BigQuery\Database
      * @access protected
      */
     protected $_db = null;
@@ -60,14 +60,6 @@ class BigQuery
     ];
 
     /**
-     * Direct connection with database
-     *
-     * @var mixed null | BigQuery
-     * @access private
-     */
-    private $connection = null;
-
-    /**
      * @param array $config configuration
      */
     public function __construct($config)
@@ -78,10 +70,11 @@ class BigQuery
     /**
      * return configuration
      *
+     * @param string $key key
      * @return array
      * @access public
      */
-    public function getConfig(string $key=null)
+    public function getConfig(string $key = '')
     {
         if ($key) {
             return $this->_config[$key];

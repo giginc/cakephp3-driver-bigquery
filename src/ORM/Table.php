@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace Giginc\BigQuery\ORM;
 
 use BadMethodCallException;
-use Cake\Datasource\EntityInterface;
 use Cake\ORM\Table as CakeTable;
 use DateTime;
 use Exception;
 use Giginc\BigQuery\Database\Driver\BigQuery;
-
 
 class Table extends CakeTable
 {
@@ -63,7 +61,6 @@ class Table extends CakeTable
     public function getSchema()
     {
         if ($this->_schema === null) {
-
  //           $this->_schema = $this->_db->getSchema();
         }
 
@@ -103,34 +100,34 @@ class Table extends CakeTable
      * getTableName
      *
      * @access public
-     * @return void
+     * @return string
      */
     public function getTableName()
     {
-       preg_match_all("/%(.)/", $this->_table, $matchs);
-       $dateString = implode('', $matchs[0]);
-       $dateFormat = implode('', $matchs[1]);
+        preg_match_all("/%(.)/", $this->_table, $matchs);
+        $dateString = implode('', $matchs[0]);
+        $dateFormat = implode('', $matchs[1]);
 
-       $date = "*";
-       if ($this->_date) {
-           $date = new DateTime($this->_date);
-           $date = $date->format($dateFormat);
-       }
+        $date = "*";
+        if ($this->_date) {
+            $date = new DateTime($this->_date);
+            $date = $date->format($dateFormat);
+        }
 
-       return str_replace($dateString, $date, $this->_table);
+        return str_replace($dateString, $date, $this->_table);
     }
 
     /**
      * select
      *
      * @access private
-     * @return void
+     * @return string
      */
     private function select()
     {
         $connection = $this->_getConnection();
 
-        $fields =  "*";
+        $fields = "*";
         if ($this->_fields) {
             $fields = implode(', ', $this->_fields);
         }
@@ -143,6 +140,13 @@ class Table extends CakeTable
         return $query;
     }
 
+    /**
+     * date
+     *
+     * @param string $string Date string
+     * @access public
+     * @return \Cake\ORM\Table
+     */
     public function date(string $string = '')
     {
         $this->_date = $string;
@@ -150,7 +154,7 @@ class Table extends CakeTable
         return $this;
     }
 
-    /** 
+    /**
      * find documents
      *
      * @param string $type Type.
@@ -159,9 +163,8 @@ class Table extends CakeTable
      * @return array
      * @throws \Exception
      */
-    public function find($type = 'all', $options = []) 
-    {   
-
+    public function find($type = 'all', $options = [])
+    {
         if ($type == 'all') {
         } else {
             $finder = 'find' . ucfirst($type);
@@ -170,9 +173,9 @@ class Table extends CakeTable
             } else {
                 throw new BadMethodCallException(
                     sprintf('Unknown finder method "%s"', $type)
-                );  
-            }   
-        }   
+                );
+            }
+        }
 
         return $this;
     }
@@ -180,9 +183,9 @@ class Table extends CakeTable
     /**
      * fields
      *
-     * @param array $array 
+     * @param array $array Array
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function fields(array $array)
     {
@@ -194,9 +197,9 @@ class Table extends CakeTable
     /**
      * between
      *
-     * @param array $array 
+     * @param array $array Array
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function between(array $array)
     {
@@ -214,9 +217,9 @@ class Table extends CakeTable
     /**
      * where
      *
-     * @param array $array 
+     * @param array $array Array
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function where(array $array)
     {
@@ -237,9 +240,9 @@ class Table extends CakeTable
     /**
      * group
      *
-     * @param array $array 
+     * @param array $array Array
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function group(array $array)
     {
@@ -255,9 +258,9 @@ class Table extends CakeTable
     /**
      * order
      *
-     * @param array $array 
+     * @param array $array Array
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function order(array $array)
     {
@@ -281,9 +284,9 @@ class Table extends CakeTable
     /**
      * limit
      *
-     * @param int $number 
+     * @param int $number Limit number
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function limit(int $number)
     {
@@ -315,6 +318,13 @@ class Table extends CakeTable
         return $response;
     }
 
+    /**
+     * getResponse
+     *
+     * @param \Cake\ORM\Query $queryResult Query Result
+     * @access private
+     * @return array
+     */
     private function getResponse($queryResult)
     {
         $response = [];
@@ -330,7 +340,7 @@ class Table extends CakeTable
      * all
      *
      * @access public
-     * @return void
+     * @return \Cake\ORM\Table
      */
     public function all()
     {
