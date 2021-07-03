@@ -25,6 +25,18 @@ class Table extends CakeTable
     private $_group;
     private $_order;
     private $_limit;
+
+    /**
+     * Are we connected to the DataSource?
+     *
+     * true - yes
+     * false - nope, and we can't connect
+     *
+     * @var bool
+     * @access public
+     */
+    public $connected = false;
+
     /**
      * The schema object containing a description of this table fields
      *
@@ -40,16 +52,61 @@ class Table extends CakeTable
      */
     private function _getConnection()
     {
-        $this->_driver = $this->getConnection()->getDriver();
+        if ($this->connected === false) {
+            $this->_driver = $this->getConnection()->getDriver();
 
-        if (!$this->_driver instanceof BigQuery) {
-            throw new Exception("Driver must be an instance of 'Giginc\BigQuery\Database\Driver\BigQuery'");
+            if (!$this->_driver instanceof BigQuery) {
+                throw new Exception("Driver must be an instance of 'Giginc\BigQuery\Database\Driver\BigQuery'");
+            }
+            $this->_db = $this->_driver->getConnection($this->getTable());
+
+            $this->getSchema();
+
+            $this->connected = true;
         }
-        $this->_db = $this->_driver->getConnection($this->getTable());
-
-        $this->getSchema();
 
         return $this->_db;
+    }
+
+    /**
+     * select
+     *
+     * @access private
+     * @return string
+     */
+    private function select()
+    {
+        $connection = $this->_getConnection();
+
+        $fields = "*";
+        if ($this->_fields) {
+            $fields = implode(', ', $this->_fields);
+        }
+
+        $dataSet = $this->_driver->getConfig('dataSet');
+        $tableId = $this->getTableId();
+
+        $query = "SELECT {$fields} FROM `{$dataSet}.{$tableId}`";
+
+        return $query;
+    }
+
+    /**
+     * getResponse
+     *
+     * @param \Cake\ORM\Query $queryResult Query Result
+     * @access private
+     * @return array
+     */
+    private function getResponse($queryResult)
+    {
+        $response = [];
+        $entity = $this->getEntityClass();
+        foreach ($queryResult as $record) {
+             $response[] = new $entity($record);
+        }
+
+        return $response;
     }
 
     /**
@@ -97,18 +154,32 @@ class Table extends CakeTable
     }
 
     /**
-     * getTableName
+     * client
      *
+     * @access public
+     * @return array
+     */
+    public function client()
+    {
+        $connection = $this->_getConnection();
+
+        return $this->_db;
+    }
+
+    /**
+     * getTableId
+     *
+     * @param string $default Default value
      * @access public
      * @return string
      */
-    public function getTableName()
+    public function getTableId($default = '*')
     {
         preg_match_all("/%(.)/", $this->_table, $matchs);
         $dateString = implode('', $matchs[0]);
         $dateFormat = implode('', $matchs[1]);
 
-        $date = "*";
+        $date = $default;
         if ($this->_date) {
             $date = new DateTime($this->_date);
             $date = $date->format($dateFormat);
@@ -118,26 +189,120 @@ class Table extends CakeTable
     }
 
     /**
-     * select
+     * getLastTableId
      *
-     * @access private
+     * @access public
      * @return string
      */
-    private function select()
+    public function getLastTableId()
     {
         $connection = $this->_getConnection();
 
-        $fields = "*";
-        if ($this->_fields) {
-            $fields = implode(', ', $this->_fields);
+        $datasetId = $this->_driver->getConfig('dataSet');
+        $dataset = $this->_db->dataset($datasetId);
+        $tables = $dataset->tables();
+        $regexTableId = $this->getTableId('.*');
+
+        $tableIds = [];
+        foreach ($tables as $table) {
+            if (preg_match("/^{$regexTableId}$/", $table->id())) {
+                $tableIds[] = $table->id();
+            }
+        }
+        sort($tableIds, SORT_STRING);
+
+        return end($tableIds);
+    }
+
+    /**
+     * copyTable
+     * Uncomment and populate these variables in your code
+     *
+     * @param string $sourceTableId The BigQuery table ID to copy from
+     * @param string $destinationTableId The BigQuery table ID to copy to
+     * @access public
+     * @return array
+     */
+    public function copyTable(string $sourceTableId, string $destinationTableId)
+    {
+        $connection = $this->_getConnection();
+
+        $datasetId = $this->_driver->getConfig('dataSet');
+        $dataset = $this->_db->dataset($datasetId);
+        $sourceTable = $dataset->table($sourceTableId);
+        $destinationTable = $dataset->table($destinationTableId);
+        $copyConfig = $sourceTable->copy($destinationTable);
+
+        return $sourceTable->runJob($copyConfig);
+    }
+
+    /**
+     * copyTableSchema
+     * Uncomment and populate these variables in your code
+     *
+     * @param string $sourceTableId The BigQuery table ID to copy from
+     * @param string $destinationTableId The BigQuery table ID to copy to
+     * @access public
+     * @return array
+     */
+    public function copyTableSchema(string $sourceTableId, string $destinationTableId)
+    {
+        $connection = $this->_getConnection();
+
+        $datasetId = $this->_driver->getConfig('dataSet');
+        $dataset = $this->_db->dataset($datasetId);
+        $sourceTable = $dataset->table($sourceTableId);
+        $sourceTableInfo = $sourceTable->info();
+        $sourceTableSchema = $sourceTableInfo['schema'];
+
+        return $dataset->createTable($destinationTableId, [
+            'schema' => $sourceTableSchema,
+        ]);
+    }
+
+    /**
+     * createTable
+     * Uncomment and populate these variables in your code
+     *
+     * @param string $tableId The BigQuery table ID
+     * @param array $fields The BigQuery table fields
+     * @access public
+     * @return array
+     */
+    public function createTable(string $tableId, array $fields)
+    {
+        $connection = $this->_getConnection();
+
+        $datasetId = $this->_driver->getConfig('dataSet');
+        $dataset = $this->_db->dataset($datasetId);
+        $schema = ['fields' => $fields];
+
+        return $dataset->createTable($tableId, ['schema' => $schema]);
+    }
+
+    /**
+     * Creates a new Query instance for a table.
+     *
+     * @access public
+     * @return \Cake\ORM\Query
+     */
+    public function query()
+    {
+        $options = [
+            'maximumBytesBilled' => $this->_driver->getConfig('maximumBytesBilled'),
+        ];
+
+        $this->_job = $this->_db->query($this->_query, $options);
+
+        if (!empty($this->_parameters)) {
+            $this->_job = $this->_job->parameters($this->_parameters);
         }
 
-        $dataSet = $this->_driver->getConfig('dataSet');
-        $tableName = $this->getTableName();
+        $response = $this->getResponse($this->_db->runQuery($this->_job));
 
-        $query = "SELECT {$fields} FROM `{$dataSet}.{$tableName}`";
+        $this->disconnect();
 
-        return $query;
+        return $response;
     }
 
     /**
@@ -296,47 +461,6 @@ class Table extends CakeTable
     }
 
     /**
-     * Creates a new Query instance for a table.
-     *
-     * @access public
-     * @return \Cake\ORM\Query
-     */
-    public function query()
-    {
-        $options = [
-            'maximumBytesBilled' => $this->_driver->getConfig('maximumBytesBilled'),
-        ];
-
-        $this->_job = $this->_db->query($this->_query, $options);
-
-        if (!empty($this->_parameters)) {
-            $this->_job = $this->_job->parameters($this->_parameters);
-        }
-
-        $response = $this->getResponse($this->_db->runQuery($this->_job));
-
-        return $response;
-    }
-
-    /**
-     * getResponse
-     *
-     * @param \Cake\ORM\Query $queryResult Query Result
-     * @access private
-     * @return array
-     */
-    private function getResponse($queryResult)
-    {
-        $response = [];
-        $entity = $this->getEntityClass();
-        foreach ($queryResult as $record) {
-             $response[] = new $entity($record);
-        }
-
-        return $response;
-    }
-
-    /**
      * all
      *
      * @access public
@@ -373,5 +497,37 @@ class Table extends CakeTable
         }
 
         return $this->query();
+    }
+
+    /**
+     * insert
+     * instantiate the bigquery table service
+     *
+     * @param array $data Data
+     * @access public
+     * @return bool
+     */
+    public function insert(array $data)
+    {
+        $connection = $this->_getConnection();
+
+        $datasetId = $this->_driver->getConfig('dataSet');
+        $tableId = $this->getTableId(date('Ymd'));
+
+        $dataset = $this->_db->dataset($datasetId);
+        $table = $dataset->table($tableId);
+
+        // not exists table
+        if (!$table->exists()) {
+            $lastTableId = $this->getLastTableId();
+            $createTable = $this->copyTableSchema($lastTableId, $tableId);
+        }
+
+        $response = $table->insertRows([[
+            'insertId' => date('YmdHisu'), // exclusion control
+            'data' => $data,
+        ]]);
+
+        return $response->isSuccessful();
     }
 }
