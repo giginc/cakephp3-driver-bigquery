@@ -56,6 +56,25 @@ class ProductsTable extends Table
         parent::initialize($config);
 
         $this->setTable('products_%Y%m%d');
+        $this->setSchema([
+            [
+                "name" => "name",
+                "type" => "STRING",
+                "mode" => "NULLABLE",
+            ],[
+                "name" => "description",
+                "type" => "STRING",
+                "mode" => "NULLABLE",
+            ],[
+                "name" => "count",
+                "type" => "INTEGER",
+                "mode" => "NULLABLE",
+            ],[
+                "name" => "created_at",
+                "type" => "DATETIME",
+                "mode" => "NULLABLE",
+            ],
+        ]);
     }
 
     public static function defaultConnectionName()
@@ -124,22 +143,30 @@ class PagesController extends AppController
     public function index()
     {
         $this->loadModel('Products');
+        // select
         $data = $this->Products->date('2021-04-12')
             ->find()
             ->fields([
                 'name',
                 'description',
-                'MAX(hit_count) AS max',
+                'MAX(count) AS max',
                 'COUNT(*) AS count',
             ])
             ->where([
                 'name' => 'iphone',
-                'hit_count >' => 0,
+                'count >' => 0,
             ])
             ->group(['name'])
             ->order(['name' => 'DESC'])
             ->limit(5)
             ->all();
+
+        // insert
+        $this->Products->insert([
+            'name' => 'iPhoneXR',
+            'description' => 'iPhoneXR',
+            'created_at' => '2021-04-21',
+        ]);
     }
 }
 ```

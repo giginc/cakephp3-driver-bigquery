@@ -519,8 +519,14 @@ class Table extends CakeTable
 
         // not exists table
         if (!$table->exists()) {
-            $lastTableId = $this->getLastTableId();
-            $createTable = $this->copyTableSchema($lastTableId, $tableId);
+            // exist schema
+            if($this->_schema) {
+                $this->createTable($tableId, $this->_schema);
+            } else {
+                $lastTableId = $this->getLastTableId();
+                $sourceTable = $dataset->table($lastTableId);
+                $createTable = $this->copyTableSchema($lastTableId, $tableId);
+            }
         }
 
         $response = $table->insertRows([[
