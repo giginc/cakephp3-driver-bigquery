@@ -60,8 +60,6 @@ class Table extends CakeTable
             }
             $this->_db = $this->_driver->getConnection($this->getTable());
 
-            $this->getSchema();
-
             $this->connected = true;
         }
 
@@ -118,7 +116,14 @@ class Table extends CakeTable
     public function getSchema()
     {
         if ($this->_schema === null) {
- //           $this->_schema = $this->_db->getSchema();
+            // search last table
+            $datasetId = $this->_driver->getConfig('dataSet');
+            $dataset = $this->_db->dataset($datasetId);
+            $lastTableId = $this->getLastTableId();
+            $table = $dataset->table($lastTableId);
+            $tableInfo = $table->info();
+
+            return $tableInfo['schema'];
         }
 
         return $this->_schema;
@@ -519,14 +524,7 @@ class Table extends CakeTable
 
         // not exists table
         if (!$table->exists()) {
-            // exist schema
-            if($this->_schema) {
-                $this->createTable($tableId, $this->_schema);
-            } else {
-                $lastTableId = $this->getLastTableId();
-                $sourceTable = $dataset->table($lastTableId);
-                $createTable = $this->copyTableSchema($lastTableId, $tableId);
-            }
+            $this->createTable($tableId, $this->getSchema());
         }
 
         $response = $table->insertRows([[
